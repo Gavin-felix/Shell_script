@@ -1,8 +1,13 @@
-#!/bin/bash
+#/bin/bash
 
+if [ $# -eq 0 ];then
+	echo -e "Script Missing a parameter!!!\n"
+	echo -e "usage:./imx6d_4.0_dbg.sh [parameter]\n\e[37mparameter:Automated or Manual\e[0m\n"
+	exit 1
+fi
+	
 clear
-echo -e "\n"
-echo -e "\033[32m *************   IAC-IMX6D-CM-TEST_V4.0_SCRIPT   *************\033[0m"
+echo -e "\n\033[32m *************   IAC-IMX6D-CM-TEST_V4.0_SCRIPT   *************\033[0m\n"
 
 Item_menu=("1 check RAM information" "2 check Disk information" "3 check Software version" \
 			"4 set & check RTC" "5 check USB & TF" "6 check BUZZER" "7 check Wired network" \
@@ -56,35 +61,35 @@ function menu(){
 	EOF
 }
 
-while [ 1 ]
-do
-	for line in {1..2}
-	do
-	echo -e "\n"
-	echo -en "\033[33mselect test items:\033[0m\033[34m('0': display menu)  \033[0m"
-	read -e Test_Num
-	echo -e "\n"
-		case $Test_Num in
-			1)
+function Test_DDR_INFO(){
 				clear
 				echo -e "\033[32m***********   DDR_INFO  *************\033[0m\n"
 					free -h
-					;;
-			2)
+					}
+					
+function Test_EMMC_INFO(){
 				clear
 				echo -e "\033[32m************  EMMC_INFO  ************\033[0m\n"
 				fdisk -l | grep "/dev/mmcblk*" | grep -v "/dev/mmcblk3boot"
-				;;
-			3)
+				}
+				
+function Test_OS_VERSION(){
 				clear
 				echo -e "\033[32m************  OS_VERSION  ************\033[0m\n"
 				uname -a
-				;;
-			4)
+				}
+				
+function Test_RTC(){
 				clear
-				echo -e "\0u33[32m******** RTC testting......  *********\033[0m\n"
-				echo -e " \033[36mTest mode selection:\033[0m\033[33m \n   1:Network calibration time  2:Local calibration time \033[0m"
-				read -e -p "input you select: (1 or 2) " RTC_Test_Method
+				echo -e "\033[32m******** RTC testting......  *********\033[0m\n"
+
+				if [ "$1" = "Automated" ]; then
+					RTC_Test_Method=2
+					else if [ "$1" = "Manual" ]; then
+							echo -e "\033[36mTest mode selection:\033[0m\033[33m \n   1:Network calibration time  2:Local calibration time \033[0m"
+							read -e -p "input you select: (1 or 2) " RTC_Test_Method
+						 fi
+				fi
 					case $RTC_Test_Method in
 						1) 
 							network_obtains_current_time
@@ -94,33 +99,48 @@ do
 							cd $PWD; sh ./rtc_test /dev/rtc
 							;;
 						2)
-							read -e -p "input Time and date to be calibrated (eg: 123123592022 )"  RTC_Time_Date_Calibrated
+							if [ "$1" = "Automated" ]; then
+								RTC_Time_Date_Calibrated=123123592022
+								else
+									read -e -p "input Time and date to be calibrated (eg: 123123592022 )"  RTC_Time_Date_Calibrated
+							fi
 							date $RTC_Time_Date_Calibrated
 							hwclock -w
 							cd $PWD; sh ./rtc_test /dev/rtc
 							;;
 					esac
-				;;
-			5)
+					}
+					
+function Test_USB_TF(){
 				clear
 				echo -e "\033[32m******** USB & TF testting......  *********\033[0m\n"
 				df -h | grep "/dev/sd*"
 				df -h | grep "/dev/mmcblk*"|grep -v "/dev/mmcblk3p1"
-				;;
-			6)
+				}
+				
+function Test_BUZZER(){
 				clear
 				echo -e "\033[32m********   BUZZER testting......  *********\033[0m\n"
 				for loop in $( seq 2 );do ./buzzer_test /dev/qiyang_buzzer 1; sleep 2; \
 				./buzzer_test /dev/qiyang_buzzer 0;sleep 2;done
-				;;
-			7)
+				}
+				
+function Test_WIRED_NETWORK(){
 				clear
 				echo -e "\033[32m********  Wired_Network testting......   *********\033[0m\n"
 				echo -ne "\033[32m `ifconfig eth0 | sed -n 1p | awk -F " "  '{print $1}'` \033[0m"
 				echo -ne "\033[33m `ifconfig eth0 | sed -n 1p | awk -F " "  '{print $5}'`  \033[0m"
 				echo -e "\033[33m `ifconfig eth0 | sed -n 2p | awk -F " "  '{print $2}'`\033[0m"
-				echo -e " \033[36m Test mode selection:\033[0m\033[33m 1:DHCP  2:STATIC \033[0m"
-				read -e -p "input you select: (1 or 2) " Wired_Test_Method
+
+				if [ "$1" = "Automated" ]; then
+					Wired_Test_Method=1
+				fi
+				
+				if [ "$1" = "Manual" ]; then
+						echo -e " \033[36m Test mode selection:\033[0m\033[33m 1:DHCP  2:STATIC \033[0m"
+						read -e -p "input you select: (1 or 2) " Wired_Test_Method
+				fi
+				
 				case $Wired_Test_Method in
 				1)
 					timeout 10 udhcpc -i eth0
@@ -133,7 +153,6 @@ do
 					fi;;
 				2)
 					read -e -p"Please enter the IP address of the local computer(eg:192.168.X.X) " Local_Pc_Ip
-
 					Network_Segment_Local_Computer=`echo $Local_Pc_Ip | awk -F "." '{print $1"."$2"."$3"."}'`
 					Host_addr_Local_Computer=`echo $Local_Pc_Ip | awk -F "." '{print $4}'`
 					IP_NEW_DEL=`expr $Host_addr_Local_Computer - 1`
@@ -160,8 +179,9 @@ do
 					sleep 5
 					fi;;
 				esac
-				;;
-			8)
+				}
+				
+function Test_CAN(){
 				clear
 					echo -e "\033[32m******  CAN testting......   ***********\033[0m\n"
 				echo -e "\033[34m J4_p1 connect J6_p3\n J6_p2 connect J6_p4\n \033[0m"
@@ -178,7 +198,7 @@ do
 				IFS="\n"
 				RX_CAN0=`grep "data" can0_rx.log |grep -v "can"`
 				TX_CAN1=`grep "data" can1_tx.log |grep -v "can"`
-				if [ "${RX_CAN0}" == "${TX_CAN1}" ]; then
+				if [ "${RX_CAN0}" = "${TX_CAN1}" ]; then
 						echo -e "\033[37m send_CAN1 @ receive_CAN0:\033[0m\033[32m success \033[0m"
 					else
 						echo "\033[31mCAN0_Receive: ${RX_CAN0}\nCAN1_Send: ${TX_CAN1\n\033}[0m"
@@ -192,7 +212,7 @@ do
 				
 				RX_CAN1=`grep "data" can1_rx.log |grep -v can`
 				TX_CAN0=`grep "data" can0_tx.log |grep -v can`
-				if [ "${RX_CAN1}" == "${TX_CAN0}" ]; then
+				if [ "${RX_CAN1}" = "${TX_CAN0}" ]; then
 						echo -e "\033[37m send_CAN0 @ receive_CAN1:\033[0m\033[32m success \033[0m"
 					else
 						echo "\033[31mCAN1_Receive: ${RX_CAN1}\nCAN0_Send: ${TX_CAN0}\n\033[0m"
@@ -200,8 +220,9 @@ do
 				fi
 				IFS=" "
 				mv $PWD/can0_rx.log $PWD/can0_tx.log $PWD/can1_rx.log $PWD/can1_tx.log /tmp
-				;;
-			9)
+				}
+				
+function Test_RS232(){
 				clear
 				echo -e "\033[32m********   RS232 testting......  *********\033[0m\n"
 				echo -e "\033[34m J6_p1 connect J6_p4\n J6_p2 connect J6_p3\n \033[0m"
@@ -211,7 +232,7 @@ do
 				
 				PACKETS_dev_ttymxc3_RX=`grep "Receive" $PWD/rs232_ttymxc3.log |sed -n 2p |awk '{print $2,$3,$4}'`
 				PACKETS_dev_ttymxc4_TX=`grep "Send" $PWD/rs232_ttymxc4.log |sed -n 2p |awk '{print $2,$3,$4}'`
-				if [ "PACKETS_dev_ttymxc3_RX" == "PACKETS_dev_ttymxc4_TX" ]; then
+				if [ "${PACKETS_dev_ttymxc3_RX}" = "${PACKETS_dev_ttymxc4_TX}" ]; then
 						echo -e "\033[37m 4_send_RS232 @ 3_receive_RS232:\033[0m\033[32m success \033[0m"
 					else
 						echo "\033[31m${PACKETS_dev_ttymxc4_TX}  ${PACKETS_dev_ttymxc3_RX}\033[0m"
@@ -221,7 +242,7 @@ do
 				
 				PACKETS_dev_ttymxc4_RX=`grep "Receive" $PWD/rs232_ttymxc4.log |sed -n 2p |awk '{print $2,$3,$4}'`
 				PACKETS_dev_ttymxc3_TX=`grep "Send" $PWD/rs232_ttymxc3.log |sed -n 2p |awk '{print $2,$3,$4}'`
-				if [ "PACKETS_dev_ttymxc4_RX" == "PACKETS_dev_ttymxc3_TX" ]; then
+				if [ "${PACKETS_dev_ttymxc4_RX}" = "${PACKETS_dev_ttymxc3_TX}" ]; then
 						echo -e "\033[37m 3_send_RS232 @ 4_receive_RS232:\033[0m\033[32m success \033[0m"
 					else
 						echo "\033[31m${PACKETS_dev_ttymxc3_TX}  ${PACKETS_dev_ttymxc4_RX}\033[0m"
@@ -230,8 +251,9 @@ do
 				
 				mv $PWD/PACKETS_dev_ttymxc4_RX.log $PWD/PACKETS_dev_ttymxc4_TX.log $PWD/PACKETS_dev_ttymxc3_RX.log  \
 				$PWD/PACKETS_dev_ttymxc3_TX.log /tmp
-				;;
-			10)
+				}
+				
+function Test_DISPLAY_7INCH_LVDS(){
 				clear
 				echo -e "\033[32m*******  display_7inch testting...... *******\033[0m\n"
 				echo -e "\n Before the test, set parameters in the UBOOT:  \
@@ -239,17 +261,19 @@ do
 				video=mxcfb0:dev=ldb,LDB-WSVGA,if=RGB666 ldb=dul0 \n"
 				ts_calibrate
 				./Imx6_qt_test
-				;;
-			11)
+				}
+				
+function Test_DISPLAY_HDMI_1080P(){
 				clear
 				echo -e "\033[32m*******  display_HDMI testting......  *******\033[0m\n"
 				echo -e "\n Before the test, set parameters in the UBOOT:  \
 				\n\n setenv bootargs_mmc 'setenv bootargs ${bootargs} root=${mmcroot} rootwait  \
 				video=mxcfb0:dev=hdmi,1920x1080M@60,if=RGB24 video=mxcfb1:off video=mxcfb2:off \
 				video=mxcfb3:off video=mxcfb4:off fec_mac=DC:07:C1:01:ff:f7' \n"
-				./Imx6_qt_test;;
-
-			12)
+				./Imx6_qt_test
+				}
+				
+function Test_RS485(){
 				clear
 				echo -e "\033[32m**********  RS485 testting......  **********\033[0m\n"
 				echo -e "\n Before the test, set parameters in the UBOOT:  \
@@ -262,7 +286,7 @@ do
 					
 				PACKETS_dev_ttymxc4_RX_34=`cat $PWD/rs485_3TX_4RX_R.log | grep "Receive"| awk '{print $3,$4}'`
 				PACKETS_dev_ttymxc3_TX_34=`cat $PWD/rs485_3TX_4RX_T.log | grep "Send"| awk '{print $3,$4}'`
-				if [ "${PACKETS_dev_ttymxc4_RX_34}" == "${PACKETS_dev_ttymxc3_TX_34}" ]; then
+				if [ "${PACKETS_dev_ttymxc4_RX_34}" = "${PACKETS_dev_ttymxc3_TX_34}" ]; then
 						echo -e "\033[37m 3_send @ 4_receive:\033[0m\033[32m success \033[0m"
 					else
 						echo "\033[31mSend: ${PACKETS_dev_ttymxc3_TX_34}  Receive: ${PACKETS_dev_ttymxc4_RX_34}\033[0m"
@@ -276,7 +300,7 @@ do
 					
 				PACKETS_dev_ttymxc4_RX_43=`cat $PWD/rs485_4TX_3RX_R.log | grep "Receive"| awk '{print $3,$4}'`
 				PACKETS_dev_ttymxc3_TX_43=`cat $PWD/rs485_4TX_3RX_T.log | grep "Send"| awk '{print $3,$4}'`
-				if [ "${PACKETS_dev_ttymxc4_RX_43}" == "${PACKETS_dev_ttymxc3_TX_43}" ]; then
+				if [ "${PACKETS_dev_ttymxc4_RX_43}" = "${PACKETS_dev_ttymxc3_TX_43}" ]; then
 						echo -e "\033[37m 4_send @ 3_receive:\033[0m\033[32m success \033[0m"
 					else
 						echo "\033[31mSend: ${PACKETS_dev_ttymxc3_TX_43}  Receive: ${PACKETS_dev_ttymxc4_RX_43}\033[0m"
@@ -285,6 +309,72 @@ do
 				wait
 				
 				mv $PWD/rs485_3TX_4RX_R.log $PWD/rs485_3TX_4RX_T.log $PWD/rs485_4TX_3RX_R.log $PWD/rs485_4TX_3RX_T.log /tmp
+				}
+				
+function EXIT(){
+				clear
+				for NUM in `seq -w 3`
+				do 
+					read -e -p "Are you sure? [yes/no] " action
+					if [ "$action" = "y" ] || [ "$action" = "Y" ] || [ "$action" = "YES" ] || [ "$action" = "yes" ]; then
+							echo -e "\033[47;32mHappy at work every day!! \n***** GAME OVER!!! ****** \033[0m"
+							echo -e "\n"; ls $PWD; echo -e "\n"
+							exit 1
+						else if [ "$action" = "n" ] || [ "$action" = "N" ] || [ "$action" = "NO" ] || [ "$action" = "no" ]; then
+									echo -e "\033[37m\n continue testing !!! \n\033[0m" 
+									break
+								else 
+									echo -e "\n\033[31m Input error, please enter again \n\033[0m"
+							fi
+					fi
+				done
+				
+				if [ "$action" = "n" ] || [ "$action" = "N" ] || [ "$action" = "NO" ] || [ "$action" = "no" ]; then
+					continue
+				else
+					echo -e "\n\033[41;37m The number of input errors exceeds three \033[0m"
+				fi
+				}
+				
+function Test_imx6d(){
+		case $1 in
+		
+			1)
+				Test_DDR_INFO
+				;;
+			2)
+				Test_EMMC_INFO
+				;;
+			3)
+				Test_OS_VERSION
+				;;
+			4)
+				Test_RTC $2
+				;;
+			5)
+				Test_USB_TF
+				;;
+			6)
+				Test_BUZZER
+				;;
+			7)
+				Test_WIRED_NETWORK $2
+				;;
+			8)
+				Test_CAN
+				;;
+			9)
+				Test_RS232
+				;;
+			10)
+				Test_DISPLAY_7INCH_LVDS
+				;;
+			11)
+				Test_DISPLAY_HDMI_1080P
+				;;
+
+			12)
+				Test_RS485
 				;;
 
 			0)
@@ -296,34 +386,34 @@ do
 				display_menu;;
 
 			E)
-				clear
-				for NUM in `seq -w 3`
-				do 
-					read -e -p "Are you sure? [yes/no] " action
-					if [ "$action" == "y" ] || [ "$action" == "Y" ] || [ "$action" == "YES" ] || [ "$action" == "yes" ]; then
-							echo -e "\033[47;32mHappy at work every day!! \n***** GAME OVER!!! ****** \033[0m"
-							echo -e "\n"; ls $PWD; echo -e "\n"
-							exit 1
-						else if [ "$action" == "n" ] || [ "$action" == "N" ] || [ "$action" == "NO" ] || [ "$action" == "no" ]; then
-							echo -e "\033[37m\n continue testing !!! \n\033[0m" 
-							break
-								else 
-									echo -e "\n\033[31m Input error, please enter again \n\033[0m"
-							fi
-					fi
-				done
-				
-				if [ "$action" == "n" ] || [ "$action" == "N" ] || [ "$action" == "NO" ] || [ "$action" == "no" ]; then
-					continue
-				else
-					echo -e "\n\033[41;37m The number of input errors exceeds three \033[0m"
-				fi
+				EXIT
 				;;
 
 			*)
 				clear
 				echo -e "\033[41;37m**********  select error  **********\033[0m"
-				echo -e "\n";;
+				echo -e "\n"
+				;;
 		esac
-	done
-done
+		}
+				
+#while [ 1 ]
+#do
+if [ $1 = "Manual" ]; then
+	while :
+		do 
+			echo -en "\n\033[33mselect items:\033[0m\033[34m('0': display menu)  \033[0m"
+			read -e Test_Num
+			echo $Test_Num
+			Test_imx6d $Test_Num $1
+		done
+	else
+		for Test_Num in `seq 12`
+			do
+				echo -e "\n"
+				Test_imx6d $Test_Num $1
+				echo $Test_Num
+			done
+				
+fi
+#done
