@@ -1,0 +1,227 @@
+#!/bin/bash
+
+clear
+echo -e "\n"
+echo -e "\033[32m *************   IAC-IMX6D-CM-TEST_V4.0_SCRIPT   *************\033[0m"
+
+Item_menu=("1 check RAM information" "2 check Disk information" "3 check Software version" \
+       	"4 set & check RTC" "5 check USB & TF" "6 check BUZZER" "7 check Wired network" \
+       	"8 check CAN communication" "9 check RS232 communication" "10 check 7 inch display" \
+       	"11 check HDMI display" "12 check RS485 comunication" "E EXIT")
+		
+function network_obtains_current_time(){
+	cd $PWD; if [ -e $PWD/beijing ]; then rm -rf $PWD/beijing; wget -q http://time.tianqi.com/beijing; else wget -q http://time.tianqi.com/beijing; fi
+	Date_Time_current=`cat beijing |grep -a "computed_time"  |sed -n 1p |awk -F ">" '{print $5}'|awk -F "<" '{print $1}'`
+	Date_current=`cat beijing |grep -a "computed_time"  |sed -n 1p |awk -F ">" '{print $5}'|awk -F "<" '{print $1}' |awk -F " " '{print $1}'`
+	Time_current=`cat beijing |grep -a "computed_time"  |sed -n 1p |awk -F ">" '{print $5}'|awk -F "<" '{print $1}' |awk -F " " '{print $2}'`
+	year_current=`cat beijing |grep -a "computed_time"  |sed -n 1p |awk -F ">" '{print $5}'|awk -F "<" '{print $1}' |awk -F " " '{print $1}' | awk -F "-" '{print $1}'`
+	month_current=`cat beijing |grep -a "computed_time"  |sed -n 1p |awk -F ">" '{print $5}'|awk -F "<" '{print $1}' |awk -F " " '{print $1}' | awk -F "-" '{print $2}'`
+	day_current=`cat beijing |grep -a "computed_time"  |sed -n 1p |awk -F ">" '{print $5}'|awk -F "<" '{print $1}' |awk -F " " '{print $1}' | awk -F "-" '{print $3}'`
+	hour_current=`cat beijing |grep -a "computed_time"  |sed -n 1p |awk -F ">" '{print $5}'|awk -F "<" '{print $1}' |awk -F " " '{print $2}' | awk -F ":" '{print $1}'`
+	minute_current=`cat beijing |grep -a "computed_time"  |sed -n 1p |awk -F ">" '{print $5}'|awk -F "<" '{print $1}' |awk -F " " '{print $2}' | awk -F ":" '{print $2}'`
+	second_current=`cat beijing |grep -a "computed_time"  |sed -n 1p |awk -F ">" '{print $5}'|awk -F "<" '{print $1}' |awk -F " " '{print $2}' | awk -F ":" '{print $3}'`
+}
+
+function display_menu(){
+	ROW=1
+	COW=5
+	item_menu=0
+	for ((i=0; i<=${#Item_menu[@]}; i++))
+		do
+			tput cup $ROW $COW
+			echo -e "\e[33m ${Item_menu[$item_menu]}\e[0m"
+			let item_menu++
+			let ROW++
+		done
+		return 0
+}
+
+function menu(){
+	cat <<-EOF
+	***********************************
+	**  1  check RAM information      **
+	**  2  check Disk information     **
+	**  3  check Software version     **
+	**  4  set & check RTC            **
+	**  5  check USB & TF             **
+	**  6  check BUZZER               **
+	**  7  check Wired network        **
+	**  8  check CAN communication    **
+	**  9  check RS232 communication  **
+	**  10 check 7 inch display       **
+	**  11 check HDMI display         **
+	**  12 check RS485 comunication   **
+	**  E  End the test and exit      **
+	************************************
+	EOF
+}
+
+while [ 1 ]
+do
+echo -e "\n"
+echo -en "\033[33m Please select test items:\033[0m\033[34m(Type '0' to display the menu)  \033[0m"
+read -e Test_Num
+echo -e "\n"
+	case $Test_Num in
+		1)
+			clear
+			echo -e "\033[32m***********   DDR_INFO  *************\033[0m\n"
+		       	free -h
+	       		;;
+		2)
+			clear
+		       	echo -e "\033[32m************  EMMC_INFO  ************\033[0m\n"
+			fdisk -l | grep "/dev/mmcblk*" | grep -v "/dev/mmcblk3boot"
+			;;
+		3)
+			clear
+		       	echo -e "\033[32m************  OS_VERSION  ************\033[0m\n"
+		   	uname -a
+		   	;;
+		4)
+			clear
+			echo -e "\0u33[32m******** RTC testting......  *********\033[0m\n"
+			echo -e " \033[36mTest mode selection:\033[0m\033[33m \n   1:Network calibration time  2:Local calibration time \033[0m"
+		   	read -e -p "input you select: (1 or 2) " RTC_Test_Method
+				case $RTC_Test_Method in
+					1) 
+						network_obtains_current_time
+						RTC_set="${month_current}$》{day_current}${hour_current}${minute_current}${year_current}"
+						date $RTC_set > /dev/null 2>&1 
+						hwclock -w
+						cd $PWD && ./rtc_test /dev/rtc;
+						;;
+					2)
+						read -e -p "input Time and date to be calibrated (eg: 123123592022 )"  RTC_Time_Date_Calibrated
+						date $RTC_Time_Date_Calibrated
+						hwclock -w
+						cd $PWD && ./rtc_test /dev/rtc;
+						;;
+				esac
+		   	;;
+		5)
+			clear
+		       	echo -e "\033[32m******** USB & TF testting......  *********\033[0m\n"
+		   	df -h | grep "/dev/sd*"
+		   	df -h | grep "/dev/mmcblk*"|grep -v "/dev/mmcblk3p1"
+		   	;;
+		6)
+			clear
+		       	echo -e "\033[32m********   BUZZER testting......  *********\033[0m\n"
+		   	for loop in $( seq 3 );do ./buzzer_test /dev/qiyang_buzzer 1; sleep 1; \
+		   	./buzzer_test /dev/qiyang_buzzer 0;sleep 1;done
+		   	;;
+		7)
+			clear
+		       	echo -e "\033[32m********  Wired_Network testting......   *********\033[0m\n"
+		   	echo -ne "\033[32m `ifconfig eth0 | sed -n 1p | awk -F " "  '{print $1}'` \033[0m"
+		   	echo -ne "\033[33m `ifconfig eth0 | sed -n 1p | awk -F " "  '{print $5}'`  \033[0m"
+		   	echo -e "\033[33m `ifconfig eth0 | sed -n 2p | awk -F " "  '{print $2}'`\033[0m"
+	     	echo -e " \033[36m Test mode selection:\033[0m\033[33m 1:DHCP  2:STATIC \033[0m"
+		   	read -e -p "input you select: (1 or 2) " Wired_Test_Method
+		   	case $Wired_Test_Method in
+			1)
+				timeout 10 udhcpc -i eth0
+				if [ $? -eq 0 ] ; then
+	          	 	ping -c3 www.baidu.com
+			 	else
+			 	echo -e "\033[41;37m Network Exception,please check network connections or DNS \033[0m"
+			 	echo -e "\033[41;36m DHCP test failed start STATIC test  \033[0m"
+			 	sleep 3
+			 	fi;;
+			2)
+				read -e -p"Please enter the IP address of the local computer(eg:192.168.X.X) " Local_Pc_Ip
+
+				Network_Segment_Local_Computer=`echo $Local_Pc_Ip | awk -F "." '{print $1"."$2"."$3"."}'`
+				Host_addr_Local_Computer=`echo $Local_Pc_Ip | awk -F "." '{print $4}'`
+				IP_NEW_DEL=`expr $Host_addr_Local_Computer - 1`
+                IP_NEW_ADD=`expr $Host_addr_Local_Computer + 1`
+				if [ `expr $Host_addr_Local_Computer + 1` -gt 255 ] || \
+								[ `expr $Host_addr_Local_Computer - 1` -lt 0 ]; then
+                    echo "\033[31m***The IP address is incorrect***\033[0m"
+                else if [ `expr $Host_addr_Local_Computer + 1` -eq 255 ]; then
+                    ifconfig eth0  $Network_Segment_Local_Computer$IP_NEW_DEL
+                     else if [ `expr $Host_addr_Local_Computer - 1` -eq 0  ]; then
+                         ifconfig eth0 $Network_Segment_Local_Computer$IP_NEW_ADD
+                          else
+							ifconfig eth0 $Network_Segment_Local_Computer$IP_NEW_ADD
+                          fi
+                     fi
+                fi
+				ping -c3 $Local_Pc_Ip
+			 	if [ $? -eq 0 ] ; then
+	          		echo -e "\033[32m Network Test successful \033[0m"
+				else
+				echo -e "\033[31m Network Exception \033[0m"
+				echo -e "\033[31m Ensure that the IP address Settings are correct  \033[0m"
+				echo -e "\033[31m check network connections,please \033[0m"
+				sleep 5
+				fi;;
+			esac
+			;;
+		8)
+			clear
+		       	echo -e "\033[32m******  CAN testting......   ***********\033[0m\n"
+		  	echo -e "\033[34m J4_p1 connect J6_p3\n J6_p2 connect J6_p4\n \033[0m"
+		   	ip link set can0 up type can bitrate 125000
+		   	ip link set can1 up type can bitrate 125000
+		   	sleep 2
+		   	echo -e "\033[32m CAN0_recevier @ CAN1_send \033[0m"
+		   	./can_test can0 0&
+		   	./can_test can1 1
+		   	sleep 2
+		   	echo -e "\033[32m CAN1_recevier @ CAN0_send \033[0m"
+		   	./can_test can1 0&
+		   	./can_test can0 1
+		   	;;
+		9)
+			clear
+			echo -e "\033[32m********   RS232 testting......  *********\033[0m\n"
+			echo -e "\033[34m J6_p1 connect J6_p4\n J6_p2 connect J6_p3\n \033[0m"
+			timeout 8 ./rs232_pressure_test /dev/ttymxc4 115200 80  &
+			timeout 8 ./rs232_pressure_test /dev/ttymxc3 115200 80
+			;;
+		10)
+			clear
+			echo -e "\033[32m*******  display_7inch testting...... *******\033[0m\n"
+			echo -e "\033[38m Before the test, set parameters in the UBOOT\n \033[0m"
+			ts_calibrate
+			./Imx6_qt_test
+			;;
+		11)
+			clear
+		       	echo -e "\033[32m*******  display_HDMI testting......  *******\033[0m\n"
+			echo -e "\033[38m Before the test, set parameters in the UBOOT\n \033[0m"
+			./Imx6_qt_test;;
+
+		12)
+			clear
+		       	echo -e "\033[32m**********  RS485 testting......  **********\033[0m\n"
+			echo -e "\033[34m J6_p7 connect J6_p9;\n J6_p8 connect J6_p10 \033[0m"
+			echo -e "\033[34m 3_send@4_receive \033[0m"
+		    	timeout 3 ./rs485_pressure_test /dev/ttymxc4 115200 80 0 &
+			echo -e "\033[34m 4_send@3_receive \033[0m"
+			timeout 3 ./rs485_pressure_test /dev/ttymxc3 115200 80 0 &
+			timeout 3 ./rs485_pressure_test /dev/ttymxc4 115200 80 1
+			;;
+
+		0)
+		       	clear
+			menu;;
+
+		00)
+		       	clear
+		       	display_menu;;
+
+		E)
+			clear
+		       	echo -e "\033[47;32mHappy at work every day!! \n***** GAME OVER!!! ****** \033[0m"
+		       	exit 1;;
+
+		*)
+			clear
+			echo -e "\033[41;37m**********  select error  **********\033[0m"
+			echo -e "\n";;
+	esac
+done
+
