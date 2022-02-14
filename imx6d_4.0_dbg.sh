@@ -1,9 +1,17 @@
 #/bin/bash
 
-if [ $# -eq 0 ];then
-	echo -e "Script Missing a parameter!!!\n"
-	echo -e "usage:./imx6d_4.0_dbg.sh [parameter]\n\e[37mparameter:Automated or Manual\e[0m\n"
+if [ $# -eq 0 ]; then
+	
+	echo -e "\n\tScript Missing a parameter!!!\n"
+	echo -e "\tusage:./imx6d_4.0_dbg.sh [parameter]\n\n\t\e[31mparameter:Automated or Manual\e[0m\n"
 	exit 1
+		
+	else if [ $1 != "Automated" ] && [ $1 != "Manual" ]; then
+	
+			echo -e "\n\tparameter input error !!!\n"
+			echo -e "\t\e[31mparameter:Automated or Manual\e[0m\n"
+			exit 1
+		 fi
 fi
 	
 clear
