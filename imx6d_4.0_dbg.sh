@@ -129,8 +129,8 @@ function Test_USB_TF(){
 				echo -e "\033[32m******** USB & TF testting......  *********\033[0m\n"
 				df -h | grep "/dev/sd*"
 				df -h | grep "/dev/mmcblk*"|grep -v "/dev/mmcblk3p1"
+				
 				USB_num=1
-
 				for usb in {a..f}
 					do
 						usbcapacity=` df -h |grep "/dev/sd${usb}1" |awk '{ print $2 }' `
