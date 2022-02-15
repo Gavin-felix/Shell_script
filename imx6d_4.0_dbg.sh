@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 if [ $# -eq 0 ]; then
 	
@@ -17,10 +17,10 @@ fi
 clear
 echo -e "\n\033[32m *************   IAC-IMX6D-CM-TEST_V4.0_SCRIPT   *************\033[0m\n"
 
-Item_menu=("1 check RAM information" "2 check Disk information" "3 check Software version" \
-			"4 set & check RTC" "5 check USB & TF" "6 check BUZZER" "7 check Wired network" \
-			"8 check CAN communication" "9 check RS232 communication" "10 check 7 inch display" \
-			"11 check HDMI display" "12 check RS485 comunication" "E EXIT")
+# Item_menu=("1 check RAM information" "2 check Disk information" "3 check Software version" \
+			# "4 set & check RTC" "5 check USB & TF" "6 check BUZZER" "7 check Wired network" \
+			# "8 check CAN communication" "9 check RS232 communication" "10 check 7 inch display" \
+			# "11 check HDMI display" "12 check RS485 comunication" "E EXIT")
 			
 function network_obtains_current_time(){
 	cd $PWD; if [ -e $PWD/beijing ]; then rm -rf $PWD/beijing; wget -q http://time.tianqi.com/beijing; else wget -q http://time.tianqi.com/beijing; fi
@@ -33,25 +33,26 @@ function network_obtains_current_time(){
 	hour_current=`cat beijing |grep -a "computed_time" |sed -n 1p |awk -F ">" '{print $5}'|awk -F "<" '{print $1}' |awk -F " " '{print $2}' | awk -F ":" '{print $1}'`
 	minute_current=`cat beijing |grep -a "computed_time" |sed -n 1p |awk -F ">" '{print $5}'|awk -F "<" '{print $1}' |awk -F " " '{print $2}' | awk -F ":" '{print $2}'`
 	second_current=`cat beijing |grep -a "computed_time" |sed -n 1p |awk -F ">" '{print $5}'|awk -F "<" '{print $1}' |awk -F " " '{print $2}' | awk -F ":" '{print $3}'`
+	rm -rf beijing
 }
 
-function display_menu(){
-	ROW=1
-	COW=5
-	item_menu=0
-	for ((i=0; i<=${#Item_menu[@]}; i++))
-		do
-			tput cup $ROW $COW
-			echo -e "\e[33m ${Item_menu[$item_menu]}\e[0m"
-			let item_menu++
-			let ROW++
-		done
-	return 0
-}
+ # function display_menu(){
+	# ROW=1
+	# COW=5
+	# item_menu=0
+	# for ((i=0; i<=${#Item_menu[@]}; i++))
+		# do
+			# tput cup $ROW $COW
+			# echo -e "\e[33m ${Item_menu[$item_menu]}\e[0m"
+			# let item_menu++
+			# let ROW++
+		# done
+	# return 0
+# }
 
 function menu(){
 	cat <<-EOF
-	***********************************
+	************************************
 	**  1  check RAM information      **
 	**  2  check Disk information     **
 	**  3  check Software version     **
@@ -72,19 +73,23 @@ function menu(){
 function Test_DDR_INFO(){
 				clear
 				echo -e "\033[32m***********   DDR_INFO  *************\033[0m\n"
-					free -h
-					}
+				free -h
+				DDR_total=`free -h |grep "Mem" |awk '{print $2}'` &> /dev/null
+				DDR_available=`free -h |grep "Mem" |awk '{print $7}'` &> /dev/null
+				}
 					
 function Test_EMMC_INFO(){
 				clear
 				echo -e "\033[32m************  EMMC_INFO  ************\033[0m\n"
 				fdisk -l | grep "/dev/mmcblk*" | grep -v "/dev/mmcblk3boot"
+				EMMC_total=`fdisk -l |grep "Disk /dev/mmcblk3:" |awk '{print $3}'` &> /dev/null
 				}
 				
 function Test_OS_VERSION(){
 				clear
 				echo -e "\033[32m************  OS_VERSION  ************\033[0m\n"
 				uname -a
+				OS_VER_INFO=`uname -a |awk '{print $12"-"$8"-"$9" @ "$3}'` &> /dev/null
 				}
 				
 function Test_RTC(){
@@ -124,6 +129,16 @@ function Test_USB_TF(){
 				echo -e "\033[32m******** USB & TF testting......  *********\033[0m\n"
 				df -h | grep "/dev/sd*"
 				df -h | grep "/dev/mmcblk*"|grep -v "/dev/mmcblk3p1"
+				USB_num=1
+
+				for usb in {a..f}
+					do
+						usbcapacity=` df -h |grep "/dev/sd${usb}1" |awk '{ print $2 }' `
+						if [ $usbcapacity ]; then
+							echo "The capacity of USB_${USB_num} is: ${usbcapacity}"
+							USB_num=` expr $USB_num + 1 `
+						fi
+					done
 				}
 				
 function Test_BUZZER(){
@@ -389,9 +404,9 @@ function Test_imx6d(){
 				clear
 				menu;;
 
-			00)
-				clear
-				display_menu;;
+			# 00)
+				# clear
+				# display_menu;;
 
 			E)
 				EXIT
@@ -405,9 +420,8 @@ function Test_imx6d(){
 		esac
 		}
 				
-#while [ 1 ]
-#do
 if [ $1 = "Manual" ]; then
+	menu
 	while :
 		do 
 			echo -en "\n\033[33mselect items:\033[0m\033[34m('0': display menu)  \033[0m"
@@ -424,4 +438,3 @@ if [ $1 = "Manual" ]; then
 			done
 				
 fi
-#done
