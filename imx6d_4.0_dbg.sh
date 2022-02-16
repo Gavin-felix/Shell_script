@@ -360,6 +360,7 @@ function EXIT(){
 		}
 				
 function Test_imx6d(){
+
 		case $1 in
 		
 			1)
