@@ -81,7 +81,7 @@ function Test_DDR_INFO(){
 function Test_EMMC_INFO(){
 		clear
 		echo -e "\033[32m************  EMMC_INFO  ************\033[0m\n"
-		fdisk -l | grep "/dev/mmcblk*" | grep -v "/dev/mmcblk3boot"
+		fdisk -l | grep "Disk /dev/mmcblk*" | grep -v "/dev/mmcblk3boot"
 		EMMC_total=`fdisk -l |grep "Disk /dev/mmcblk3:" |awk '{print $3}'` &> /dev/null
 		}
 
@@ -105,8 +105,9 @@ function Test_RTC(){
 		fi
 			case $RTC_Test_Method in
 				1)
+					echo -e "\e[5;32mTesting......\e[0m"
 					network_obtains_current_time
-					RTC_set="${month_current}$》{day_current}${hour_current}${minute_current}${year_current}"
+					RTC_set="${month_current}${day_current}${hour_current}${minute_current}${year_current}"
 					date $RTC_set > /dev/null 2>&1
 					hwclock -w
 					cd $PWD; sh ./rtc_test /dev/rtc
@@ -130,22 +131,22 @@ function Test_USB_TF(){
 		df -h | grep "/dev/sd*"
 		df -h | grep "/dev/mmcblk*"|grep -v "/dev/mmcblk3p1"
 
-		USB_num=1
-		for usb in {a..f}
-			do
-				usbcapacity=` df -h |grep "/dev/sd${usb}1" |awk '{ print $2 }' `
-				if [ $usbcapacity ]; then
-					echo "The capacity of USB_${USB_num} is: ${usbcapacity}" >> /tmp/USB_TEST.log
-					USB_num=` expr $USB_num + 1 `
-				fi
-			done
+##		USB_num=1
+##		for usb in {a..f}
+##			do
+##				usbcapacity=` df -h |grep "/dev/sd${usb}1" |awk '{ print $2 }' `
+##				if [ $usbcapacity ]; then
+##					echo "The capacity of USB_${USB_num} is: ${usbcapacity}" >> /tmp/USB_TEST.log
+##					USB_num=` expr $USB_num + 1 `
+##				fi
+##			done
 		}
 
 function Test_BUZZER(){
 		clear
 		echo -e "\033[32m********   BUZZER testting......  *********\033[0m\n"
-		for loop in $( seq 2 );do ./buzzer_test /dev/qiyang_buzzer 1; sleep 2; \
-		./buzzer_test /dev/qiyang_buzzer 0;sleep 2;done
+		for loop in $( seq 2 );do ./buzzer_test /dev/qiyang_buzzer 1; sleep 1; \
+		./buzzer_test /dev/qiyang_buzzer 0;sleep 1;done
 		}
 
 function Test_WIRED_NETWORK(){
@@ -206,41 +207,51 @@ function Test_WIRED_NETWORK(){
 
 function Test_CAN(){
 		clear
-			echo -e "\033[32m******  CAN testting......   ***********\033[0m\n"
+		echo -e "\033[32m******  CAN testting......   ***********\033[0m\n"
 		echo -e "\033[34m J4_p1 connect J6_p3\n J6_p2 connect J6_p4\n \033[0m"
 
-		ip link set can0 up type can bitrate 125000
 		ip link set can1 up type can bitrate 125000
-		sleep 2
+		sleep 20 up type can bitrate 125000
+		ip link set can
 
 		echo -e "\033[32m CAN0_recevier @ CAN1_send \033[0m"
-		./can_test can0 0 > $PWD/can0_rx.log 2>&1 &
-		./can_test can1 1 > $PWD/can1_tx.log 2>&1
+		timeout 5 ./can_test can0 0 > $PWD/can0_rx.log 2>&1 &
+		timeout 5 ./can_test can1 1 > $PWD/can1_tx.log 2>&1
 		sleep 3
 		wait
+		
 		IFS="\n"
-		RX_CAN0=`grep "data" can0_rx.log |grep -v "can"`
-		TX_CAN1=`grep "data" can1_tx.log |grep -v "can"`
-		if [ "${RX_CAN0}" = "${TX_CAN1}" ]; then
-				echo -e "\033[37m send_CAN1 @ receive_CAN0:\033[0m\033[32m success \033[0m"
-			else
-				echo "\033[31mCAN0_Receive: ${RX_CAN0}\nCAN1_Send: ${TX_CAN1}\n\033[0m"
-				echo -e "\033[37m send_CAN1 @ receive_CAN0:\033[0m\033[31m fail \n\n\033[0m"
+		if [ -s $PWD/can0_rx.log ] || [ -s $PWD/can1_tx.log ]; then
+			RX_CAN0=`grep "data" can0_rx.log |grep -v "can"`
+			TX_CAN1=`grep "data" can1_tx.log |grep -v "can"`
+			if [ "${RX_CAN0}" = "${TX_CAN1}" ]; then
+					echo -e "\033[37m send_CAN1 @ receive_CAN0:\033[0m\033[32m success \033[0m"
+				else
+					echo -e  "\033[31mCAN0_Receive:\n${RX_CAN0}\n\nCAN1_Send:\n${TX_CAN1}\n\033[0m"
+					echo -e "\033[37m send_CAN1 @ receive_CAN0:\033[0m \033[31m fail \n\n\033[0m"
+			fi
+		else
+			echo -e "\e[37m can test fail......\e[0m"
 		fi
 
 		echo -e "\033[32m CAN1_recevier @ CAN0_send \033[0m"
-		./can_test can1 0 > $PWD/can1_rx.log 2>&1 &
-		./can_test can0 1 > $PWD/can0_tx.log 2>&1
+		timeout 5 ./can_test can1 0 > $PWD/can1_rx.log 2>&1 &
+		timeout 5 ./can_test can0 1 > $PWD/can0_tx.log 2>&1
 		wait
-
-		RX_CAN1=`grep "data" can1_rx.log |grep -v can`
-		TX_CAN0=`grep "data" can0_tx.log |grep -v can`
-		if [ "${RX_CAN1}" = "${TX_CAN0}" ]; then
-				echo -e "\033[37m send_CAN0 @ receive_CAN1:\033[0m\033[32m success \033[0m"
-			else
-				echo "\033[31mCAN1_Receive: ${RX_CAN1}\nCAN0_Send: ${TX_CAN0}\n\033[0m"
-				echo -e "\033[37m send_CAN0 @ receive_CAN1:\033[0m\033[31m fail \n\n\033[0m"
+		
+		if [ -s $PWD/can0_tx.log ] || [ -s $PWD/can1_rx.log ]; then
+			RX_CAN1=`grep "data" can1_rx.log |grep -v can`
+			TX_CAN0=`grep "data" can0_tx.log |grep -v can`
+			if [ "${RX_CAN1}" = "${TX_CAN0}" ]; then
+					echo -e "\033[37m send_CAN0 @ receive_CAN1:\033[0m\033[32m success \033[0m"
+				else
+					echo -e "\033[31mCAN1_Receive:\n${RX_CAN1}\nCAN0_Send:\n${TX_CAN0}\n\033[0m"
+					echo -e "\033[37m send_CAN0 @ receive_CAN1:\033[0m\033[31m fail \n\n\033[0m"
+			fi
+		else
+			echo -e "\e[37m can test fail......\e[0m"
 		fi
+		
 		IFS=" "
 		mv $PWD/can0_rx.log $PWD/can0_tx.log $PWD/can1_rx.log $PWD/can1_tx.log /tmp
 		}
@@ -258,7 +269,7 @@ function Test_RS232(){
 		if [ "${PACKETS_dev_ttymxc3_RX}" = "${PACKETS_dev_ttymxc4_TX}" ]; then
 				echo -e "\033[37m 4_send_RS232 @ 3_receive_RS232:\033[0m\033[32m success \033[0m"
 			else
-				echo "\033[31m${PACKETS_dev_ttymxc4_TX}  ${PACKETS_dev_ttymxc3_RX}\033[0m"
+				echo -e "\033[31m${PACKETS_dev_ttymxc4_TX}  ${PACKETS_dev_ttymxc3_RX}\033[0m"
 				echo -e "\033[37m 4_send_RS232 @ 3_receive_RS232:\033[0m\033[31m fail \n\n\033[0m"
 		fi
 		wait
@@ -268,7 +279,7 @@ function Test_RS232(){
 		if [ "${PACKETS_dev_ttymxc4_RX}" = "${PACKETS_dev_ttymxc3_TX}" ]; then
 				echo -e "\033[37m 3_send_RS232 @ 4_receive_RS232:\033[0m\033[32m success \033[0m"
 			else
-				echo "\033[31m${PACKETS_dev_ttymxc3_TX}  ${PACKETS_dev_ttymxc4_RX}\033[0m"
+				echo -e "\033[31m${PACKETS_dev_ttymxc3_TX}  ${PACKETS_dev_ttymxc4_RX}\033[0m"
 				echo -e "\033[37m 3_send_RS232 @ 4_receive_RS232:\033[0m\033[31m fail \n\n\033[0m"
 		fi
 
@@ -359,7 +370,7 @@ function EXIT(){
 		fi
 		}
 
-function Report_imx6d_4.0(){
+function Report_imx6d_v4(){
 	
 echo -e "\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n"
 echo -e "----------------- IAC-IMX6D-CM-TEST_V4.0_Test_Report ----------------\n"
@@ -369,14 +380,8 @@ echo -e "INFO_EMMC(GB):\tTOTAL: ${EMMC_total}\n"
 echo -e "INFO_OS:\t${OS_VER_INFO}\n"
 echo -e "INFO_RTC:\t"date +"%Y-%m-%d %H:%M.%S"\n
 echo -e "INFO_USB/TF(GB):\t";cat < /tmp/USB_TEST.log
-
-
-
-
-
 echo -e "\n@@@@@@@@@@@@@@@@@@@@@@@-- End of the report --@@@@@@@@@@@@@@@@@@@@@@@\n"
-
-		}
+}
 
 function Test_imx6d(){
 
@@ -431,6 +436,11 @@ function Test_imx6d(){
 			E)
 				EXIT
 				;;
+			
+			R)
+				clear
+				Report_imx6d_v4
+				;;
 
 			*)
 				clear
@@ -438,6 +448,7 @@ function Test_imx6d(){
 				echo -e "\n"
 				;;
 		esac
+		Report_imx6d_v4
 		}
 
 if [ $1 = "Manual" ]; then
