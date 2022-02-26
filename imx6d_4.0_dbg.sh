@@ -378,7 +378,7 @@ echo -e "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n
 echo -e "INFO_DDR(GB):\tTOTAL: ${DDR_total}\tAVAILABLE: ${DDR_available}\n"
 echo -e "INFO_EMMC(GB):\tTOTAL: ${EMMC_total}\n"
 echo -e "INFO_OS:\t${OS_VER_INFO}\n"
-echo -e "INFO_RTC:\t"date +"%Y-%m-%d %H:%M.%S"\n
+echo -e "INFO_RTC:\t"`date +"%Y-%m-%d %H:%M.%S"`\n
 echo -e "INFO_USB/TF(GB):\t";cat < /tmp/USB_TEST.log
 echo -e "\n@@@@@@@@@@@@@@@@@@@@@@@-- End of the report --@@@@@@@@@@@@@@@@@@@@@@@\n"
 }
